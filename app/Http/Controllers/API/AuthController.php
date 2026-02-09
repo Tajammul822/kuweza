@@ -107,8 +107,18 @@ class AuthController extends Controller
             ]);
         }
 
+        $farmerMeta = null;
+        $farmProfile = null;
+
+        if ($user->role_id == 2) {
+            $farmerMeta = UserMeta::where('user_id', $user->id)->first();
+            $farmProfile = FarmProfile::where('user_id', $user->id)->first();
+        }
+
         return response()->json([
             'user' => $user,
+            'farmer_meta' => $farmerMeta,
+            'farm_profile' => $farmProfile,
             'message' => 'User registered successfully'
         ], 201);
     }
