@@ -107,18 +107,8 @@ class AuthController extends Controller
             ]);
         }
 
-        $farmerMeta = null;
-        $farmProfile = null;
-
-        if ($user->role_id == 2) {
-            $farmerMeta = UserMeta::where('user_id', $user->id)->first();
-            $farmProfile = FarmProfile::where('user_id', $user->id)->first();
-        }
-
         return response()->json([
             'user' => $user,
-            'farmer_meta' => $farmerMeta,
-            'farm_profile' => $farmProfile,
             'message' => 'User registered successfully'
         ], 201);
     }
@@ -138,11 +128,17 @@ class AuthController extends Controller
             ], 401);
         }
 
+        $farmProfile = null;
+
+        if ($user->role_id == 2) {
+            $farmProfile = FarmProfile::where('user_id', $user->id)->first();
+        }
 
         $token = $user->createToken($user->phone);
 
         return response()->json([
             'user' => $user,
+            'farm_profile' => $farmProfile,
             'token' => $token->plainTextToken,
         ]);
     }
