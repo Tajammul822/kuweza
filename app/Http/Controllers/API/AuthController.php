@@ -10,23 +10,125 @@ use App\Models\UserMeta;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use App\Models\FarmProfile;
+use App\Models\VendorProfile;
 
 class AuthController extends Controller
 {
+    // public function register(Request $request)
+    // {
+
+    //     $fields = $request->validate([
+    //         'name' => 'nullable',
+    //         'email' => 'required|email|unique:users',
+    //         'role_id' => 'required',
+    //         'password' => 'required|confirmed',
+    //         'phone' => 'required'
+    //     ]);
+
+
+    //     if ($request->role_id == 2) {
+    //         $request->validate([
+    //             'street' => 'nullable',
+    //             'village' => 'nullable',
+    //             'region' => 'nullable',
+    //             'bank_name' => 'nullable',
+    //             'account_number' => 'nullable',
+    //             'id_image' => 'required',
+    //             'id_number' => 'required',
+    //             'farm_name' => 'required',
+    //         ]);
+    //     }
+
+
+    //     $user = User::create([
+    //         'name' => $fields['name'],
+    //         'email' => $fields['email'],
+    //         'password' => Hash::make($fields['password']),
+    //         'role_id' => $fields['role_id'],
+    //         'phone' => $fields['phone']
+    //     ]);
+
+    //     // If farmer, save meta + base64 image
+    //     if ($user->role_id == 2) {
+    //         $imagePath = null;
+
+    //         if ($request->id_image) {
+
+    //             $base64Image = $request->id_image;
+
+    //             if (preg_match('/^data:image\/(\w+);base64,/', $base64Image, $type)) {
+    //                 $imageType = strtolower($type[1]);
+
+    //                 if (!in_array($imageType, ['jpg', 'jpeg', 'png'])) {
+    //                     return response()->json([
+    //                         'message' => 'Invalid image type'
+    //                     ], 422);
+    //                 }
+
+    //                 $base64Image = substr($base64Image, strpos($base64Image, ',') + 1);
+    //                 $base64Image = base64_decode($base64Image);
+
+    //                 if ($base64Image === false) {
+    //                     return response()->json([
+    //                         'message' => 'Base64 decode failed'
+    //                     ], 422);
+    //                 }
+
+    //                 $destinationPath = public_path('assets/images/id');
+
+    //                 if (!File::exists($destinationPath)) {
+    //                     File::makeDirectory($destinationPath, 0755, true);
+    //                 }
+
+    //                 $fileName = time() . '_' . Str::random(10) . '.' . $imageType;
+
+    //                 file_put_contents($destinationPath . '/' . $fileName, $base64Image);
+
+    //                 $imagePath = 'assets/images/id/' . $fileName;
+    //             }
+    //         }
+
+    //         UserMeta::create([
+    //             'user_id' => $user->id,
+    //             'street' => $request->street,
+    //             'village' => $request->village,
+    //             'region' => $request->region,
+    //             'bank_name' => $request->bank_name,
+    //             'account_number' => $request->account_number,
+    //             'id_image' => $imagePath,
+    //             'id_number' => $request->id_number,
+    //         ]);
+
+    //         $qrCodeString = (string) Str::uuid();
+
+    //         FarmProfile::create([
+    //             'user_id' => $user->id,
+    //             'farm_name' => $request->farm_name,
+    //             'qr_code_string' => $qrCodeString
+    //         ]);
+    //     }
+
+    //     return response()->json([
+    //         'user' => $user,
+    //         'message' => 'User registered successfully'
+    //     ], 201);
+    // }
+
     public function register(Request $request)
     {
 
+        // 1. Validate Base User Fields
         $fields = $request->validate([
             'name' => 'nullable',
             'email' => 'required|email|unique:users',
-            'role_id' => 'required',
+            'role_id' => 'required|in:1,2,3', // Good practice to restrict valid roles
             'password' => 'required|confirmed',
             'phone' => 'required'
         ]);
 
 
-        if ($request->role_id == 2) {
-            $request->validate([
+        if (in_array($request->role_id, [2, 3])) {
+            $metaValidation = [
                 'street' => 'nullable',
                 'village' => 'nullable',
                 'region' => 'nullable',
@@ -34,8 +136,18 @@ class AuthController extends Controller
                 'account_number' => 'nullable',
                 'id_image' => 'required',
                 'id_number' => 'required',
-                'farm_name' => 'required',
-            ]);
+            ];
+
+
+            if ($request->role_id == 2) {
+                $metaValidation['farm_name'] = 'required';
+            } elseif ($request->role_id == 3) {
+                $metaValidation['shop_name'] = 'nullable';
+                $metaValidation['market_location'] = 'nullable';
+                $metaValidation['payment_provider'] = 'required';
+            }
+
+            $request->validate($metaValidation);
         }
 
 
@@ -47,12 +159,13 @@ class AuthController extends Controller
             'phone' => $fields['phone']
         ]);
 
-        // If farmer, save meta + base64 image
-        if ($user->role_id == 2) {
+
+        if (in_array($user->role_id, [2, 3])) {
+
             $imagePath = null;
 
-            if ($request->id_image) {
 
+            if ($request->id_image) {
                 $base64Image = $request->id_image;
 
                 if (preg_match('/^data:image\/(\w+);base64,/', $base64Image, $type)) {
@@ -80,9 +193,7 @@ class AuthController extends Controller
                     }
 
                     $fileName = time() . '_' . Str::random(10) . '.' . $imageType;
-
                     file_put_contents($destinationPath . '/' . $fileName, $base64Image);
-
                     $imagePath = 'assets/images/id/' . $fileName;
                 }
             }
@@ -98,13 +209,24 @@ class AuthController extends Controller
                 'id_number' => $request->id_number,
             ]);
 
-            $qrCodeString = (string) Str::uuid();
+            if ($user->role_id == 2) {
 
-            FarmProfile::create([
-                'user_id' => $user->id,
-                'farm_name' => $request->farm_name,
-                'qr_code_string' => $qrCodeString
-            ]);
+                $qrCodeString = (string) Str::uuid();
+
+                FarmProfile::create([
+                    'user_id' => $user->id,
+                    'farm_name' => $request->farm_name,
+                    'qr_code_string' => $qrCodeString
+                ]);
+            } elseif ($user->role_id == 3) {
+
+                VendorProfile::create([
+                    'user_id' => $user->id,
+                    'shop_name' => $request->shop_name,
+                    'market_location' => $request->market_location,
+                    'payment_provider' => $request->payment_provider
+                ]);
+            }
         }
 
         return response()->json([
