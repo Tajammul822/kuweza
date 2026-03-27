@@ -13,4 +13,9 @@ class FarmProfile extends Model
         'farm_name',
         'qr_code_string'
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
 }

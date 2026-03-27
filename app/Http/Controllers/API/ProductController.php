@@ -8,6 +8,7 @@ use App\Models\Product;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
+use App\Models\FarmProfile;
 
 class ProductController extends Controller
 {
@@ -107,5 +108,37 @@ class ProductController extends Controller
             ->get();
 
         return response()->json($products);
+    }
+
+    public function getFarmProducts($farm_id)
+    {
+        
+        $farmExists = FarmProfile::find($farm_id);
+
+        if (!$farmExists) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Farm not found.'
+            ], 404);
+        }
+
+        
+        $products = Product::where('farm_id', $farm_id)
+            ->where('is_available', '1')
+            ->get();
+
+        if ($products->isEmpty()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'No products found for this farm.',
+                'data' => []
+            ], 200);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Products fetched successfully.',
+            'data' => $products
+        ], 200);
     }
 }

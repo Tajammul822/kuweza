@@ -117,11 +117,11 @@ class AuthController extends Controller
     public function register(Request $request)
     {
 
-        // 1. Validate Base User Fields
+        
         $fields = $request->validate([
             'name' => 'nullable',
             'email' => 'required|email|unique:users',
-            'role_id' => 'required|in:1,2,3', // Good practice to restrict valid roles
+            'role_id' => 'required|in:1,2,3',
             'password' => 'required|confirmed',
             'phone' => 'required'
         ]);

@@ -14,4 +14,9 @@ class VendorProfile extends Model
         'market_location',
         'payment_provider'
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
 }

@@ -55,4 +55,9 @@ class User extends Authenticatable
     {
         return $this->hasOne(FarmProfile::class);
     }
+
+    public function vendorProfile()
+    {
+        return $this->hasOne(VendorProfile::class, 'user_id');
+    }
 }
