@@ -40,7 +40,7 @@
                                         <tr>
                                             <td><strong>{{ $transaction->transaction_code }}</strong></td>
                                             
-                                            {{-- Vendor aur Farmer ka naam nikalne ka tariqa --}}
+                                            
                                             <td>{{ $transaction->vendorProfile->user->name ?? 'N/A' }}</td>
                                             <td>{{ $transaction->farmerProfile->user->name ?? 'N/A' }}</td>
                                             
@@ -60,8 +60,7 @@
                                             </td>
                                             
                                             <td>
-                                                {{-- View Details / Approve Button --}}
-                                                {{-- Iska route hum agle step mein banayenge --}}
+                                           
                                                 <a href="{{ route('admin.transactions.show', $transaction->id) }}" class="btn btn-info btn-sm" style="height:30px;width:30px;border-radius:50%" title="View Details">
                                                     <i class="fas fa-eye"></i>
                                                 </a>
@@ -81,7 +80,7 @@
         $(document).ready(function() {
             $('#transactions-table').DataTable({
                 pageLength: 50,
-                order: [[4, 'desc']] // Date ke hisaab se descending sort
+                order: [[4, 'desc']]
             });
         });
     </script>
