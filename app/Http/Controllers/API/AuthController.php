@@ -21,7 +21,7 @@ class AuthController extends Controller
   
         $fields = $request->validate([
             'name' => 'nullable',
-            'email' => 'required|email|unique:users',
+            'email' => 'nullable|email',
             'role_id' => 'required|in:1,2,3',
             'password' => 'required|confirmed',
             'phone' => 'required|unique:users,phone' 
