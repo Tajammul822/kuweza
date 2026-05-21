@@ -107,7 +107,7 @@ class MpesaService
             'input_ServiceProviderCode'      => $this->serviceProviderCode,
             'input_ThirdPartyConversationID' => $conversationId,
             'input_TransactionReference'     => preg_replace('/[^a-zA-Z0-9]/', '', $transactionReference),
-            'input_PaymentItemsDesc'         => substr($description, 0, 70),
+            'input_PaymentItemsDesc'         => substr(preg_replace('/[^a-zA-Z0-9 ]/', '', $description), 0, 70),
         ];
 
         Log::debug('[M-Pesa] B2C request', ['url' => $url, 'payload' => $payload]);
@@ -158,7 +158,7 @@ class MpesaService
             'input_ServiceProviderCode'      => $this->serviceProviderCode,
             'input_ThirdPartyConversationID' => $conversationId,
             'input_TransactionReference'     => preg_replace('/[^a-zA-Z0-9]/', '', $transactionReference),
-            'input_PurchasedItemsDesc'       => substr($description, 0, 70),
+            'input_PurchasedItemsDesc'       => substr(preg_replace('/[^a-zA-Z0-9 ]/', '', $description), 0, 70),
         ];
 
         Log::debug('[M-Pesa] C2B request', ['url' => $url, 'payload' => $payload]);
