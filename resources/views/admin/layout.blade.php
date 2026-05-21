@@ -41,12 +41,46 @@
                     </li>
                 </ul>
                 <ul class="topbar-item list-unstyled d-inline-flex align-items-center mb-0">
-                    {{-- <li class="topbar-item">
-                        <a class="nav-link nav-icon" href="javascript:void(0);" id="light-dark-mode">
-                            <i class="icofont-moon dark-mode"></i>
-                            <i class="icofont-sun light-mode"></i>
+
+                    {{-- Notification Bell Dropdown --}}
+                    <li class="topbar-item me-2 dropdown" id="notif-dropdown">
+                        <a class="nav-link nav-icon position-relative" href="#" role="button"
+                           id="notifBell" title="Notifications"
+                           onclick="toggleNotifDropdown(event)">
+                            <i class="fas fa-bell fs-5"></i>
+                            @php
+                                /** @var \App\Models\User $authUser */
+                                $authUser    = auth()->user();
+                                $unreadCount = $authUser->unreadNotifications()->count();
+                            @endphp
+                            <span id="notif-badge"
+                                  class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                                  style="font-size:10px; {{ $unreadCount === 0 ? 'display:none' : '' }}">
+                                {{ $unreadCount > 99 ? '99+' : $unreadCount }}
+                            </span>
                         </a>
-                    </li> --}}
+
+                        {{-- Dropdown Panel --}}
+                        <div id="notif-panel"
+                             class="dropdown-menu dropdown-menu-end shadow"
+                             style="display:none; width:380px; max-height:480px; overflow-y:auto; right:0; left:auto; top:100%; position:absolute; z-index:1050;">
+
+                            <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
+                                <strong><i class="fas fa-bell me-1"></i> Notifications</strong>
+                                <div class="d-flex gap-2">
+                                    <a href="{{ route('admin.notifications') }}" class="small text-muted">View all</a>
+                                    <span class="text-muted">|</span>
+                                    <a href="#" class="small text-muted" onclick="markAllRead(event)">Mark all read</a>
+                                </div>
+                            </div>
+
+                            <div id="notif-list">
+                                <div class="text-center text-muted py-4">
+                                    <i class="fas fa-spinner fa-spin"></i> Loading...
+                                </div>
+                            </div>
+                        </div>
+                    </li>
 
                     <li class="dropdown topbar-item">
                         <a class="nav-link dropdown-toggle arrow-none nav-icon" data-bs-toggle="dropdown" href="#"
@@ -197,6 +231,14 @@
     </div>
 </li>
 
+                        <li class="nav-item">
+    <a class="nav-link {{ request()->routeIs('admin.payment-logs.*') ? 'active' : '' }}"
+        href="{{ route('admin.payment-logs.index') }}">
+        <i class="fas fa-receipt menu-icon"></i>
+        <span>Payment Logs</span>
+    </a>
+</li>
+
                         <!-- Logs -->
                         {{-- @if (auth()->check() && auth()->user()->roles_id == 1)
                             <li class="nav-item">
@@ -252,9 +294,11 @@
             @yield('admin-user-index-content')
             @yield('admin-rule-content')
             @yield('admin-rule-create-content')
-             @yield('admin-rule-edit-content')
-             @yield('admin-transaction-index-content')
-             @yield('admin-transaction-detail-content')
+            @yield('admin-rule-edit-content')
+            @yield('admin-transaction-index-content')
+            @yield('admin-transaction-detail-content')
+            @yield('admin-notifications-content')
+            @yield('admin-payment-logs-content')
 
             <footer class="footer text-center text-sm-start d-print-none">
                 <div class="container-xxl">
@@ -297,6 +341,99 @@
     <script src="{{ url('assets/js/index.init.js') }}"></script>
     <script src="{{ url('assets/js/app.js') }}"></script>
     <script src="{{ url('assets/js/form-validation.js') }}"></script>
+
+    <script>
+    const NOTIF_DROPDOWN_URL  = "{{ route('admin.notifications.dropdown') }}";
+    const NOTIF_READ_URL      = "{{ url('admin/notifications') }}";
+    const NOTIF_READ_ALL_URL  = "{{ route('admin.notifications.read-all') }}";
+    const CSRF_TOKEN          = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+    let dropdownOpen = false;
+
+    function toggleNotifDropdown(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const panel = document.getElementById('notif-panel');
+        dropdownOpen = !dropdownOpen;
+        panel.style.display = dropdownOpen ? 'block' : 'none';
+        if (dropdownOpen) loadNotifications();
+    }
+
+    document.addEventListener('click', function (e) {
+        if (!document.getElementById('notif-dropdown').contains(e.target)) {
+            document.getElementById('notif-panel').style.display = 'none';
+            dropdownOpen = false;
+        }
+    });
+
+    function loadNotifications() {
+        fetch(NOTIF_DROPDOWN_URL, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(r => r.json())
+            .then(data => {
+                renderNotifications(data.notifications);
+                updateBadge(data.unread_count);
+            });
+    }
+
+    function renderNotifications(items) {
+        const list = document.getElementById('notif-list');
+        if (!items.length) {
+            list.innerHTML = '<div class="text-center text-muted py-4"><i class="fas fa-bell-slash me-1"></i>No notifications</div>';
+            return;
+        }
+
+        const typeIcon = {
+            'NEW_TRANSACTION':  '<span class="bg-warning text-dark rounded-circle d-inline-flex align-items-center justify-content-center" style="width:34px;height:34px;flex-shrink:0"><i class="fas fa-plus small"></i></span>',
+            'REPAYMENT_RECEIVED': '<span class="bg-success text-white rounded-circle d-inline-flex align-items-center justify-content-center" style="width:34px;height:34px;flex-shrink:0"><i class="fas fa-money-bill-wave small"></i></span>',
+            'default':          '<span class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center" style="width:34px;height:34px;flex-shrink:0"><i class="fas fa-info small"></i></span>',
+        };
+
+        list.innerHTML = items.map(n => {
+            const icon      = typeIcon[n.type] || typeIcon['default'];
+            const unreadCls = n.is_read ? '' : 'bg-light';
+            const txUrl     = n.tx_id ? `{{ url('admin/transactions') }}/${n.tx_id}` : '#';
+            return `
+                <a href="#" class="d-flex align-items-start gap-2 px-3 py-2 border-bottom text-decoration-none text-dark ${unreadCls}"
+                   onclick="openNotification(event, '${n.id}', '${txUrl}')">
+                    ${icon}
+                    <div class="flex-grow-1 overflow-hidden">
+                        <div class="small ${n.is_read ? 'text-muted' : 'fw-semibold'}" style="white-space:normal;line-height:1.3">
+                            ${n.message}
+                        </div>
+                        <div class="text-muted" style="font-size:11px">${n.time}</div>
+                    </div>
+                    ${!n.is_read ? '<span class="badge bg-danger rounded-pill align-self-center" style="font-size:8px">NEW</span>' : ''}
+                </a>`;
+        }).join('');
+    }
+
+    function openNotification(e, id, url) {
+        e.preventDefault();
+        fetch(`${NOTIF_READ_URL}/${id}/read`, {
+            method: 'POST',
+            headers: { 'X-CSRF-TOKEN': CSRF_TOKEN, 'X-Requested-With': 'XMLHttpRequest' }
+        }).finally(() => {
+            if (url && url !== '#') window.location.href = url;
+        });
+    }
+
+    function markAllRead(e) {
+        e.preventDefault();
+        fetch(NOTIF_READ_ALL_URL, {
+            method: 'POST',
+            headers: { 'X-CSRF-TOKEN': CSRF_TOKEN, 'X-Requested-With': 'XMLHttpRequest' }
+        }).then(() => {
+            updateBadge(0);
+            loadNotifications();
+        });
+    }
+
+    function updateBadge(count) {
+        const badge = document.getElementById('notif-badge');
+        badge.textContent = count > 99 ? '99+' : count;
+        badge.style.display = count === 0 ? 'none' : '';
+    }
+    </script>
 
 </body>
 <!--end body-->
