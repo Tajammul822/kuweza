@@ -35,4 +35,19 @@ class Transaction extends Model
     {
         return $this->belongsTo(FarmProfile::class, 'farmer_id');
     }
+
+    public function rule()
+    {
+        return $this->belongsTo(LoanPaymentRule::class, 'rule_id');
+    }
+
+    public function installments()
+    {
+        return $this->hasMany(RepaymentInstallment::class);
+    }
+
+    public function paymentLogs()
+    {
+        return $this->hasMany(PaymentLog::class);
+    }
 }
