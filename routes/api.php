@@ -25,7 +25,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/vendor/transactions/initiate', [TransactionController::class, 'initiateTransaction']);
 
     // Repayments (vendor)
-    Route::get('/vendor/installments',            [RepaymentController::class, 'index']);
+    Route::get('/vendor/installments',                    [RepaymentController::class, 'index']);
     Route::post('/vendor/installments/{installment}/pay', [RepaymentController::class, 'pay']);
 
     // Notifications
