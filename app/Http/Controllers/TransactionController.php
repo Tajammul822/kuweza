@@ -97,6 +97,7 @@ class TransactionController extends Controller
                                     ?? $result['output_ConversationID']
                                     ?? null,
                 'gateway_name'      => 'M-PESA',
+                'status'            => config('mpesa.simulate_b2c') ? 'CONFIRMED' : 'PENDING',
             ]);
 
             // ── Generate repayment schedule ───────────────────────────
