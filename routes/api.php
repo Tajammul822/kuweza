@@ -7,6 +7,7 @@ use App\Http\Controllers\API\TransactionController;
 use App\Http\Controllers\API\RepaymentController;
 use App\Http\Controllers\API\MpesaCallbackController;
 
+
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
@@ -29,6 +30,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/vendor/installments',                    [RepaymentController::class, 'index']);
     Route::post('/vendor/installments/{installment}/pay', [RepaymentController::class, 'pay']);
     Route::get('/vendor/payment-logs',                    [RepaymentController::class, 'paymentLogs']);
+
+    // Profile
+    Route::put('/profile/update',   [AuthController::class, 'updateProfile']);
+    Route::put('/profile/password', [AuthController::class, 'changePassword']);
 
     // Notifications
     Route::get('/notifications', function () {

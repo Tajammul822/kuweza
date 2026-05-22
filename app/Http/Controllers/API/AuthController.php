@@ -138,6 +138,88 @@ class AuthController extends Controller
         ], 201);
     }
 
+    public function updateProfile(Request $request)
+    {
+        $user = $request->user();
+
+        $rules = [
+            'name'    => 'required|string|max:255',
+            'street'  => 'nullable|string|max:255',
+            'village' => 'nullable|string|max:255',
+            'region'  => 'nullable|string|max:255',
+        ];
+
+        if ($user->role_id == 2) {
+            $rules['farm_name'] = 'required|string|max:255';
+        }
+
+        if ($user->role_id == 3) {
+            $rules['shop_name'] = 'nullable|string|max:255';
+        }
+
+        $data = $request->validate($rules);
+
+        // Update user name
+        $user->update(['name' => $data['name']]);
+
+        // Upsert address meta (street, village, region)
+        UserMeta::updateOrCreate(
+            ['user_id' => $user->id],
+            [
+                'street'  => $data['street']  ?? null,
+                'village' => $data['village'] ?? null,
+                'region'  => $data['region']  ?? null,
+            ]
+        );
+
+        // Role-specific profile update
+        if ($user->role_id == 2) {
+            FarmProfile::where('user_id', $user->id)
+                ->update(['farm_name' => $data['farm_name']]);
+        }
+
+        if ($user->role_id == 3 && isset($data['shop_name'])) {
+            VendorProfile::where('user_id', $user->id)
+                ->update(['shop_name' => $data['shop_name']]);
+        }
+
+        $user->load('vendorProfile', 'farmerProfile');
+        $meta = UserMeta::where('user_id', $user->id)->first();
+
+        return response()->json([
+            'message' => 'Profile updated successfully.',
+            'user'    => [
+                'name'       => $user->name,
+                'phone'      => $user->phone,
+                'farm_name'  => $user->farmerProfile?->farm_name,
+                'shop_name'  => $user->vendorProfile?->shop_name,
+                'street'     => $meta?->street,
+                'village'    => $meta?->village,
+                'region'     => $meta?->region,
+            ],
+        ]);
+    }
+
+    public function changePassword(Request $request)
+    {
+        $request->validate([
+            'current_password' => 'required',
+            'new_password'     => 'required|min:6|confirmed',
+        ]);
+
+        $user = $request->user();
+
+        if (!Hash::check($request->current_password, $user->password)) {
+            return response()->json([
+                'message' => 'Current password is incorrect.',
+            ], 422);
+        }
+
+        $user->update(['password' => Hash::make($request->new_password)]);
+
+        return response()->json(['message' => 'Password changed successfully.']);
+    }
+
     public function login(Request $request)
     {
        
