@@ -145,6 +145,30 @@ class MpesaService
         string $transactionReference,
         string $description
     ): array {
+        if (config('mpesa.simulate_c2b')) {
+            $fakeId = strtoupper(substr(md5(uniqid()), 0, 16));
+            Log::debug('[M-Pesa] C2B SIMULATED', [
+                'customer' => $customerMSISDN,
+                'amount'   => $amount,
+                'reference' => $transactionReference,
+                'fake_tx_id' => $fakeId,
+            ]);
+            return [
+                'output_ResponseCode'             => 'INS-0',
+                'output_ResponseDesc'             => 'Simulated C2B success (sandbox bypass)',
+                'output_TransactionID'            => $fakeId,
+                'output_ConversationID'           => $fakeId,
+                'output_ThirdPartyConversationID' => $fakeId,
+            ];
+        }
+
+        Log::debug('[M-Pesa] C2B config', [
+            'base_url' => $this->baseUrl,
+            'spc'      => $this->serviceProviderCode,
+            'country'  => $this->country,
+            'currency' => $this->currency,
+        ]);
+
         $sessionKey          = $this->getSessionKey();
         $encryptedSessionKey = $this->encrypt($sessionKey);
         $conversationId      = preg_replace('/[^a-zA-Z0-9]/', '', (string) Str::uuid());

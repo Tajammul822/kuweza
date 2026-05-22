@@ -12,4 +12,6 @@ return [
     'admin_msisdn'          => env('MPESA_ADMIN_MSISDN'),
     // Set to true to skip real M-Pesa calls and simulate success (sandbox B2C is often unavailable)
     'simulate_b2c'          => env('MPESA_SIMULATE_B2C', false),
+    // Set to true to skip real C2B USSD push and immediately mark the installment PAID
+    'simulate_c2b'          => env('MPESA_SIMULATE_C2B', false),
 ];
