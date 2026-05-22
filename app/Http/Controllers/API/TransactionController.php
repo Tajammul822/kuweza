@@ -15,6 +15,45 @@ use Illuminate\Support\Str;
 
 class TransactionController extends Controller
 {
+    /**
+     * Vendor's purchase history — every transaction they have submitted.
+     */
+    public function purchases()
+    {
+        $user = Auth::user();
+
+        if ($user->role_id != 3 || !$user->vendorProfile) {
+            return response()->json(['message' => 'Unauthorized.'], 403);
+        }
+
+        $transactions = Transaction::where('vendor_id', $user->vendorProfile->id)
+            ->with([
+                'farmerProfile.user:id,name,phone,address',
+                'items.product:id,title,unit_price,currency',
+            ])
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(fn ($tx) => [
+                'transaction_code' => $tx->transaction_code,
+                'status'           => $tx->status,
+                'farm_name'        => $tx->farmerProfile->farm_name,
+                'farm_owner_name'  => $tx->farmerProfile->user->name,
+                'farm_contact'     => $tx->farmerProfile->user->phone,
+                'farm_address'     => $tx->farmerProfile->user->address,
+                'products'         => $tx->items->map(fn ($item) => [
+                    'name'       => $item->product->title,
+                    'quantity'   => $item->quantity,
+                    'unit_price' => $item->product->unit_price,
+                    'currency'   => $item->product->currency,
+                ]),
+                'total_amount'  => $tx->total_amount,
+                'currency'      => $tx->currency,
+                'purchase_date' => $tx->created_at->toDateTimeString(),
+            ]);
+
+        return response()->json(['purchases' => $transactions]);
+    }
+
     public function initiateTransaction(Request $request)
     {
         $request->validate([

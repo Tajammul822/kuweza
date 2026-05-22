@@ -22,7 +22,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/farmers/{farmer_id}/products', [ProductController::class, 'getFarmProducts']);
 
     // Transactions
-    Route::post('/vendor/transactions/initiate', [TransactionController::class, 'initiateTransaction']);
+    Route::post('/vendor/transactions/initiate',  [TransactionController::class, 'initiateTransaction']);
+    Route::get('/vendor/purchases',               [TransactionController::class, 'purchases']);
 
     // Repayments (vendor)
     Route::get('/vendor/installments',                    [RepaymentController::class, 'index']);
