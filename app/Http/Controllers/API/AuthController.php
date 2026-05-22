@@ -138,6 +138,23 @@ class AuthController extends Controller
         ], 201);
     }
 
+    public function getProfile(Request $request)
+    {
+        $user = $request->user();
+        $user->load('vendorProfile', 'farmerProfile');
+        $meta = UserMeta::where('user_id', $user->id)->first();
+
+        return response()->json([
+            'name'       => $user->name,
+            'phone'      => $user->phone,
+            'farm_name'  => $user->farmerProfile?->farm_name,
+            'shop_name'  => $user->vendorProfile?->shop_name,
+            'street'     => $meta?->street,
+            'village'    => $meta?->village,
+            'region'     => $meta?->region,
+        ]);
+    }
+
     public function updateProfile(Request $request)
     {
         $user = $request->user();

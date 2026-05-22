@@ -32,6 +32,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/vendor/payment-logs',                    [RepaymentController::class, 'paymentLogs']);
 
     // Profile
+    Route::get('/profile',          [AuthController::class, 'getProfile']);
     Route::put('/profile/update',   [AuthController::class, 'updateProfile']);
     Route::put('/profile/password', [AuthController::class, 'changePassword']);
 
