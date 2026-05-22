@@ -24,22 +24,25 @@ class MpesaCallbackController extends Controller
         $conversationId = $payload['output_ConversationID']           ?? null;
         $transactionId  = $payload['output_TransactionID']            ?? null;
 
+        $log = PaymentLog::where('payment_type', 'DISBURSEMENT_TO_FARMER')
+            ->where('gateway_reference', $conversationId)
+            ->first();
+
         if ($responseCode !== 'INS-0') {
             Log::warning('[M-Pesa] B2C disbursement failed', [
                 'code'            => $responseCode,
                 'desc'            => $payload['output_ResponseDesc'] ?? 'N/A',
                 'conversation_id' => $conversationId,
             ]);
+            $log?->update(['status' => 'FAILED']);
             return response()->json(['status' => 'received']);
         }
 
-        // Update the PaymentLog with the confirmed M-Pesa transaction ID
-        $log = PaymentLog::where('payment_type', 'DISBURSEMENT_TO_FARMER')
-            ->where('gateway_reference', $conversationId)
-            ->first();
-
-        if ($log && $transactionId) {
-            $log->update(['gateway_reference' => $transactionId]);
+        if ($log) {
+            $log->update([
+                'gateway_reference' => $transactionId ?? $log->gateway_reference,
+                'status'            => 'CONFIRMED',
+            ]);
             Log::info('[M-Pesa] Disbursement confirmed', [
                 'transaction_id' => $log->transaction_id,
                 'mpesa_tx_id'    => $transactionId,
@@ -57,31 +60,34 @@ class MpesaCallbackController extends Controller
         $payload = $request->all();
         Log::info('[M-Pesa] C2B repayment callback', $payload);
 
-        $responseCode   = $payload['output_ResponseCode']             ?? null;
-        $conversationId = $payload['output_ConversationID']           ?? null;
-        $transactionId  = $payload['output_TransactionID']            ?? null;
-        $thirdPartyId   = $payload['output_ThirdPartyConversationID'] ?? null;
-
-        if ($responseCode !== 'INS-0') {
-            Log::warning('[M-Pesa] C2B repayment failed in callback', [
-                'code' => $responseCode,
-                'desc' => $payload['output_ResponseDesc'] ?? 'N/A',
-            ]);
-            return response()->json(['status' => 'received']);
-        }
+        $responseCode = $payload['output_ResponseCode']             ?? null;
+        $transactionId = $payload['output_TransactionID']            ?? null;
+        $thirdPartyId  = $payload['output_ThirdPartyConversationID'] ?? null;
 
         // Find the pending repayment log by ThirdPartyConversationID
         $log = PaymentLog::where('payment_type', 'REPAYMENT_FROM_VENDOR')
             ->where('gateway_reference', $thirdPartyId)
             ->first();
 
+        if ($responseCode !== 'INS-0') {
+            Log::warning('[M-Pesa] C2B repayment failed in callback', [
+                'code' => $responseCode,
+                'desc' => $payload['output_ResponseDesc'] ?? 'N/A',
+            ]);
+            $log?->update(['status' => 'FAILED']);
+            return response()->json(['status' => 'received']);
+        }
+
         if (!$log) {
             Log::warning('[M-Pesa] No matching repayment log found', ['third_party_id' => $thirdPartyId]);
             return response()->json(['status' => 'received']);
         }
 
-        // Update log with final M-Pesa transaction ID
-        $log->update(['gateway_reference' => $transactionId]);
+        // Update log with final M-Pesa transaction ID and mark confirmed
+        $log->update([
+            'gateway_reference' => $transactionId ?? $log->gateway_reference,
+            'status'            => 'CONFIRMED',
+        ]);
 
         // Mark the installment as PAID
         if ($log->installment_id) {

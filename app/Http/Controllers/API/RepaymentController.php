@@ -121,6 +121,7 @@ class RepaymentController extends Controller
         $logs = PaymentLog::whereHas('transaction', function ($q) use ($user) {
             $q->where('vendor_id', $user->vendorProfile->id);
         })
+        ->where('status', 'CONFIRMED')
         ->with([
             'transaction:id,transaction_code,currency',
             'installment:id,installment_number',
@@ -260,7 +261,7 @@ class RepaymentController extends Controller
                 'gateway_reference' => $gatewayRef,
             ]);
 
-            PaymentLog::create([
+            $paymentLog = PaymentLog::create([
                 'transaction_id'    => $transaction->id,
                 'installment_id'    => $installment->id,
                 'user_id'           => $user->id,
@@ -268,6 +269,7 @@ class RepaymentController extends Controller
                 'amount'            => $totalDue,
                 'gateway_reference' => $gatewayRef,
                 'gateway_name'      => 'M-PESA',
+                'status'            => 'PENDING',
             ]);
 
             Log::info('[Pay] SUCCESS — C2B initiated', [
@@ -279,6 +281,7 @@ class RepaymentController extends Controller
             // In simulation mode, immediately mark the installment PAID
             // (bypasses the async callback — for dev/testing only)
             if (config('mpesa.simulate_c2b')) {
+                $paymentLog->update(['status' => 'CONFIRMED']);
                 $installment->update([
                     'amount_paid' => $installment->base_amount + $installment->penalty_amount,
                     'status'      => 'PAID',
