@@ -27,6 +27,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Repayments (vendor)
     Route::get('/vendor/installments',                    [RepaymentController::class, 'index']);
     Route::post('/vendor/installments/{installment}/pay', [RepaymentController::class, 'pay']);
+    Route::get('/vendor/payment-logs',                    [RepaymentController::class, 'paymentLogs']);
 
     // Notifications
     Route::get('/notifications', function () {

@@ -107,6 +107,45 @@ class RepaymentController extends Controller
     }
 
     /**
+     * Payment history for the authenticated vendor.
+     * Returns all PaymentLogs tied to the vendor's transactions.
+     */
+    public function paymentLogs()
+    {
+        $user = Auth::user();
+
+        if (!$user->vendorProfile) {
+            return response()->json(['message' => 'Unauthorized.'], 403);
+        }
+
+        $logs = PaymentLog::whereHas('transaction', function ($q) use ($user) {
+            $q->where('vendor_id', $user->vendorProfile->id);
+        })
+        ->with([
+            'transaction:id,transaction_code,currency',
+            'installment:id,installment_number',
+        ])
+        ->orderBy('created_at', 'desc')
+        ->get()
+        ->map(fn ($log) => [
+            'id'                 => $log->id,
+            'type'               => $log->payment_type,
+            'type_label'         => $log->payment_type === 'DISBURSEMENT_TO_FARMER'
+                                        ? 'Disbursed to Farmer'
+                                        : 'Repayment',
+            'amount'             => $log->amount,
+            'currency'           => $log->transaction->currency,
+            'transaction_code'   => $log->transaction->transaction_code,
+            'installment_number' => $log->installment?->installment_number,
+            'gateway'            => $log->gateway_name,
+            'reference'          => $log->gateway_reference,
+            'date'               => $log->created_at->toDateTimeString(),
+        ]);
+
+        return response()->json(['payment_logs' => $logs]);
+    }
+
+    /**
      * Vendor initiates payment for a specific installment via M-Pesa C2B.
      */
     public function pay(RepaymentInstallment $installment)
