@@ -14,10 +14,13 @@ class Transaction extends Model
         'vendor_id',
         'farmer_id',
         'rule_id',
+        'category_id',
         'total_amount',
         'currency',
         'status',
-        'admin_notes'
+        'admin_notes',
+        'vendor_invoice_image',
+        'admin_invoice_image',
     ];
 
     public function items()
@@ -30,7 +33,7 @@ class Transaction extends Model
         return $this->belongsTo(VendorProfile::class, 'vendor_id');
     }
 
-    
+
     public function farmerProfile()
     {
         return $this->belongsTo(FarmProfile::class, 'farmer_id');

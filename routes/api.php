@@ -6,6 +6,7 @@ use App\Http\Controllers\API\ProductController;
 use App\Http\Controllers\API\TransactionController;
 use App\Http\Controllers\API\RepaymentController;
 use App\Http\Controllers\API\MpesaCallbackController;
+use App\Http\Controllers\CategoryController;
 
 
 Route::post('/register', [AuthController::class, 'register']);
@@ -16,6 +17,10 @@ Route::post('/mpesa/callback/disbursement', [MpesaCallbackController::class, 'di
 Route::post('/mpesa/callback/repayment',    [MpesaCallbackController::class, 'repayment']);
 
 Route::middleware('auth:sanctum')->group(function () {
+
+    //categories
+
+    Route::get('/categories', [CategoryController::class, 'index']);
 
     // Products
     Route::post('/farmer/products',          [ProductController::class, 'store']);
